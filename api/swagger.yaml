@@ -1,0 +1,372 @@
+swagger: '2.0'
+info:
+  title: Coins collection api
+  version: "0.0.1"
+  description: All the requests are made with oauth2 Authorization header with Bearer TOKEN value.
+host: api.coincoll.ru
+schemes:
+  - https
+basePath: /
+produces:
+  - application/json
+consumes:
+  - application/json
+paths:
+  /api/countries:
+    get:
+      tags: 
+        - public
+        - country
+      summary: Returns list of supported countries
+      parameters:
+        - name: sort_by
+          type: string
+          in: query
+          description: Name of field in Country (id, name) to sort by
+        - name: offset
+          in: query
+          type: number
+          description: Zero based offset of start result
+          default: 0
+        - name: count
+          in: query
+          type: number
+          description: Count of records to return. Maximum is 100
+          default: 20
+      responses: 
+        200: 
+          description: OK
+          schema:
+            $ref: '#/definitions/CountryShortList'
+    post:
+      tags: 
+        - admin
+        - country
+      summary: Creates new country
+      parameters:
+        - name: country
+          in: body
+          description: Country to create
+          schema:
+            $ref: '#/definitions/CountryToCreate'
+      responses:
+        200:
+          description: OK
+  /api/currencies:
+    get:
+      tags:
+        - public
+      summary: List suported currencies.
+      parameters:
+        - name: sort_by
+          in: query
+          type: string
+          description: Name of field of CurrencyShort to sort by.
+        - name: desc
+          in: query
+          type: boolean
+          default: false
+          description: If there is need to sort in DESC order, one need to set paramter to true.
+      responses:
+        200:
+          description: Currencies list
+          schema: 
+            $ref: '#/definitions/CurrencyList'
+    post:
+      tags:
+        - admin
+      summary: Adds currency to a list of currencies
+      parameters:
+        - name: currency
+          in: body
+          schema:
+            $ref: '#/definitions/CurrencyToCreate'
+      responses:
+        200:
+          description: OK
+  /api/mintpaces:
+    get:
+      tags:
+        - public
+        - mintplace
+      summary: search for mintplaces
+      parameters:
+        - name: offset
+          in: query
+          type: number
+          default: 0
+          description: Offset of current result
+        - name: count
+          in: query
+          type: number
+          default: 20
+          description: Number of records to return. Minimum is 1, maximum is 100
+        - name: sort_by
+          in: query
+          type: string
+          enum: ['name', 'id']
+          default: name
+          description: Sort key to use for ordering
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/MintplaceList'
+    post:
+      tags:
+        - admin
+        - mintplace
+      summary: create new mintplace
+      parameters:
+        - name: mintplace
+          in: body
+          schema:
+            $ref: '#/definitions/MintplaceToCreate'
+      responses:
+        200: 
+          description: OK
+  /api/coins:
+    get:
+      tags:
+        - public
+        - coin
+      summary: Search for coins
+      description: Searches for coins using provided filter criteria
+      parameters:
+        - name: name
+          in: query
+          type: string
+          description: Coin name filter
+      responses:
+        200:
+          description: Person successfully created
+          schema: 
+            $ref: "#/definitions/CoinShortList"
+    post:
+      tags:
+        - admin
+        - coin
+      summary: Create coin
+      description: Create new coin type, with specified country id, currency id.
+      parameters:
+        - name: coin
+          in: body
+          schema: 
+            $ref: '#/definitions/CoinToCreate'
+      responses:
+        200: 
+          description: OK
+
+definitions:
+
+  MintplaceToCreate:
+    type: object
+    required:
+      - code
+      - name
+    properties:
+      code:
+        type: string
+        description: Code of mintplace
+      name: 
+        type: string
+        description: Mintplace name
+  
+  Mintplace:
+    type: object
+    allOf:
+      - $ref: '#/definitions/MintplaceToCreate'
+    required:
+      - id
+    properties:
+      id:
+        type: number
+        description: database generated id of coin
+  
+  MintplaceList:
+    type: object
+    required:
+      - items
+    properties:
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/Mintplace'
+  
+  CurrencyMeasurmentUnit:
+    type: object
+    properties:
+      id: 
+        type: number
+        description: Internal measurment unit id
+      name: 
+        type: string
+        description: Measurment unit name (kopeks, rubles, etc.)
+  
+  CurrencyAmountToCreate:
+    type: object
+    properties:
+      currency: 
+        $ref: '#/definitions/Currency'
+      unit: 
+        $ref: '#/definitions/CurrencyMeasurmentUnit'
+      amount: 
+        type: number
+        description: Count of units in currency.
+  
+  CurrencyAmount:
+    type: object
+    allOf:
+      - $ref: '#/definitions/CurrencyAmountToCreate'
+    required:
+      - id
+    properties:
+      id:
+        type: number
+        description: Internal id for this currency amount
+  
+  CoinSeries:
+    type: object
+    properties:
+      id: 
+        type: number
+        description: Internal series id
+      name: 
+        type: string
+        description: Series name for coin
+  
+  CoinToCreate:
+    type: object
+    properties:
+      name:
+        type: string
+        description: Coin name
+      amount: 
+        $ref: '#/definitions/CurrencyAmount'
+      type:
+        type: string
+        enum: ['regular', 'commemorative']
+      issue_start:
+        $ref: '#/definitions/FloatingDate'
+      issue_finish:
+        $ref: '#/definitions/FloatingDate'
+      series:
+        type: array
+        description: Array of series to add coin to. Only id property of series is used upon creation
+        items:
+          $ref: '#/definitions/CoinSeries'
+    
+
+  FloatingDate:
+    type: object
+    required:
+      - type
+    properties:
+      type:
+        type: string
+        enum: ['date', 'year', 'year-range']
+        description: Type of floating date
+      date:
+        type: string
+        description: Date in format yyyy-mm-dd in case if type is 'date'
+      year:
+        type: number
+        description: Year in case if type is 'year'
+      year_from:
+        type: number
+        description: year from in case if type is 'year-range'
+      year_to:
+        type: number
+        description: year to in case if type is 'year-range'
+        
+
+  CountryToCreate:
+    type: object
+    required:
+      - name
+      - start_date
+    properties:
+      name:
+        type: string
+        description: Country name
+      code_alpha_2:
+        type: string
+        description: Country code according to ISO ALPHA 2, if applicable
+      code_alpha_3:
+        type: string
+        description: Country code according to ISO ALPHA 3, if applicable
+      code_numeric:
+        type: string
+        description: ISO Numeric Code UN M49 Numerical Code, if applicable
+      start_date: 
+        $ref: '#/definitions/FloatingDate'
+      end_date:
+        $ref: '#/definitions/FloatingDate'
+      
+  CountryShort:
+    type: object
+    properties:
+      id: 
+        type: number
+        description: Country primary key
+      name: 
+        type: string
+        description: Country name
+
+  CountryShortList:
+    type: object
+    description: List of short country definitions
+    properties:
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/CountryShort'
+          
+  CurrencyToCreate:
+    type: object
+    description: Stored currency information
+    properties:
+      code: 
+        type: string
+        description: currency ISO 4217 code, if applicable
+      name:
+        type: string
+        description: Name of currency
+    
+  Currency:
+    type: object
+    description: Short currency information
+    required:
+      - id
+    allOf:
+      - $ref: '#/definitions/CurrencyToCreate'
+    properties:
+      id:
+        type: number
+        description: Internal currency identifier
+    
+  CurrencyList:
+    type: object
+    description: List of short currencies information.
+    properties:
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/Currency'
+
+  CoinShortList: 
+    type: object
+    description: List for short coins representation
+    properties:
+      items:
+        type: array
+        items:
+          $ref: '#/definitions/CoinShort'
+
+  CoinShort:
+    type: object
+    properties:
+      id:
+        type: number
+        description: Coin identifier
+
